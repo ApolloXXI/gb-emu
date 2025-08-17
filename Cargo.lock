@@ -3,5 +3,13 @@
 version = 4
 
 [[package]]
-name = "gbemu"
+name = "gb-cli"
+version = "0.1.0"
+
+[[package]]
+name = "gb-core"
+version = "0.1.0"
+
+[[package]]
+name = "gb-sdl"
 version = "0.1.0"
