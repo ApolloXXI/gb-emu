@@ -1,0 +1,3 @@
+[workspace]
+members = ["gb-core", "gb-cli", "gb-sdl"]
+resolver = "2"
