@@ -1,3 +1,11 @@
+#[derive(Default, Clone, Copy)]
+pub struct Flags{
+    pub zero: bool,
+    pub subtract: bool,
+    pub half_carry: bool,
+    pub carry: bool,
+}
+
 #[derive(Default, Clone, Copy, Debug)]
 pub struct Registers {
     pub a: u8,
@@ -18,6 +26,7 @@ impl Registers {
 
     pub fn set_af(&mut self, value: u16) {
         self.a = (value >> 8) as u8;
+        self.f = Flags::from((value & 0xF0) as u8);
     }
     pub fn get_bc(&self) -> u16 {
         (self.b as u16) << 8
