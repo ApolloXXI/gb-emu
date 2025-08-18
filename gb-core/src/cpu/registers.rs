@@ -6,6 +6,27 @@ pub struct Flags{
     pub carry: bool,
 }
 
+const ZERO_FLAG_BYTE_POSITION: u8 = 7;
+const SUBTRACT_FLAG_BYTE_POSITION: u8 = 6;
+const HALF_CARRY_FLAG_BYTE_POSITION: u8 = 5;
+const CARRY_FLAG_BYTE_POSITION: u8 = 4;
+
+impl std::convert::From<Flags> for u8{
+    fn from(flag: Flags) -> u8{
+        ((flag.zero as u8) << ZERO_FLAG_BYTE_POSITION)
+        | ((flag.subtract as u8) << SUBTRACT_FLAG_BYTE_POSITION)
+        | ((flag.half_carry as u8) << HALF_CARRY_FLAG_BYTE_POSITION)
+        | ((flag.carry as u8) << CARRY_FLAG_BYTE_POSITION)
+    }
+}
+
+impl std::convert::From<u8> for Flags{
+    fn from(flag: u8) -> Self{
+
+    }
+}
+
+
 #[derive(Default, Clone, Copy, Debug)]
 pub struct Registers {
     pub a: u8,
