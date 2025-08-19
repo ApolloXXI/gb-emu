@@ -1,4 +1,4 @@
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, Debug)]
 pub struct Flags{
     pub zero: bool,
     pub subtract: bool,
@@ -21,8 +21,13 @@ impl std::convert::From<Flags> for u8{
 }
 
 impl std::convert::From<u8> for Flags{
-    fn from(flag: u8) -> Self{
-
+    fn from(byte: u8) -> Self{
+        Self{
+            zero: ((byte >> ZERO_FLAG_BYTE_POSITION)    & 1) != 0,
+            subtract: ((byte >> SUBTRACT_FLAG_BYTE_POSITION)    &1) != 0,
+            half_carry: ((byte >> HALF_CARRY_FLAG_BYTE_POSITION)    &1) != 0,
+            carry: ((byte >> CARRY_FLAG_BYTE_POSITION)       &1) != 0
+        }
     }
 }
 
@@ -34,7 +39,7 @@ pub struct Registers {
     pub c: u8,
     pub d: u8,
     pub e: u8,
-    pub f: u8,
+    pub f: Flags,
     pub h: u8,
     pub l: u8,
 }
@@ -42,7 +47,7 @@ pub struct Registers {
 impl Registers {
     pub fn get_af(&self) -> u16{
         ((self.a as u16) << 8)
-        | (self.f as u16)
+        | (u8::from(self.f) as u16)
     }
 
     pub fn set_af(&mut self, value: u16) {
