@@ -1,7 +1,7 @@
 /*
 Flags represent the 4 meaningful bits of the Game Boy's F register.
 (Zero, Subtract, Half_Carry, Carry)
-Theu are stored as boolean
+They are stored as boolean
 */
 
 #[derive(Default, Clone, Copy, Debug)]
