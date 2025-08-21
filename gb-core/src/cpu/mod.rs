@@ -8,6 +8,8 @@ use instruction::{Instruction, ArithmeticTarget};
 #[derive(Default)]
 pub struct CPU{
     pub registers: Registers,
+    pub program_counter: u16, // Program counter: address of next opcode/operand
+    pub stack_pointer: u16, // Stack Pointer: top of stack (grows downward)
 }
 
 impl CPU{
@@ -15,7 +17,11 @@ impl CPU{
     /// Returns a CPU with default-initialised registers (0)
     /// Self is an alias for CPU
     pub fn new() -> Self{
-        Self { registers: Registers:: default() }
+        Self { 
+            registers: Registers:: default(),
+            program_counter: 0x0000,
+            stack_pointer: 0xFFFE,
+        }
     }
 
     /// Decoding and executing one instruction
