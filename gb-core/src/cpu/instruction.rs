@@ -1,8 +1,13 @@
+use crate::cpu::registers::Registers;
+
 // Central place where all instructions are defined
 pub enum Instruction{
-    // ADD instruction
-    // ArithmeticTarget is which register they're targeting
-    // Similar to ADD A, r
+    // ========== ARITHMETIC OPERATIONS ==========
+
+    // ADD instruction: Adds value from source register to accumulator (A register)
+    // Example: ADD B means A = A + B
+    // Affects flags: Z (zero), N (reset), H (half-carry), C (carry)
+
     ADD(ArithmeticTarget), // add register r to A
     SUB(ArithmeticTarget), // subtract the value in register r with the value in register A
     SBC(ArithmeticTarget), // subtract with carry. The value of the carry flag is also subtracted from the number
@@ -13,18 +18,35 @@ pub enum Instruction{
 
     ADDHL(WordTarget16), // just like ADD. Add register r to HL
 
-    // single-register inc/dec
+    // ========== INCREMENT/DECREMENT OPERATIONS ==========
     INC(ArithmeticTarget), // increment the value of a register with 1
     DEC(ArithmeticTarget), // vice versa
 
-    // flag operations
+    // ========== FLAG OPERATIONS ==========
+
     CCF, // (complement carry flag) - toggle the value of the carry flag
     SCF, // set the carry flag to true
     CPL, // (Complement) literally a complement
 
-    // A-only rotates
+    // ========== ROTATE OPERATIONS (A REGISTER ONLY) ==========
+
     RLA, // bit rotate A register left through the carry flag
     RRA, // bit rotate right
+    RLCA, //
+    RRCA,
+
+    // ========== BIT MANIPULATION OPERATIONS ==========
+
+    BIT {bit: u8, registers: ArithmeticTarget},
+    RES { bit: u8, registers: ArithmeticTarget },
+    SET { bit: u8, registers: ArithmeticTarget },
+    SRL(ArithmeticTarget),
+    SRA(ArithmeticTarget),
+    RR(ArithmeticTarget),
+    RL(ArithmeticTarget),
+    RRC(ArithmeticTarget),
+    RLC(ArithmeticTarget),
+    SWAP(ArithmeticTarget),
     
 
 }
