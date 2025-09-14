@@ -17,6 +17,7 @@ pub enum Instruction{
     CP(ArithmeticTarget), // (Compare) just like SUB except the result is not stored
 
     ADDHL(WordTarget16), // just like ADD. Add register r to HL
+    ADC(ArithmeticTarget), // add with carry. The value of the carry flag is also added to the number
 
     // ========== INCREMENT/DECREMENT OPERATIONS ==========
     INC(ArithmeticTarget), // increment the value of a register with 1
@@ -32,21 +33,27 @@ pub enum Instruction{
 
     RLA, // bit rotate A register left through the carry flag
     RRA, // bit rotate right
-    RLCA, //
-    RRCA,
+    RLCA, // rotate left (not through the carry flag)
+    RRCA, // rotate right (not through the carry flag)
 
     // ========== BIT MANIPULATION OPERATIONS ==========
 
-    BIT {bit: u8, registers: ArithmeticTarget},
-    RES { bit: u8, registers: ArithmeticTarget },
-    SET { bit: u8, registers: ArithmeticTarget },
-    SRL(ArithmeticTarget),
-    SRA(ArithmeticTarget),
-    RR(ArithmeticTarget),
-    RL(ArithmeticTarget),
-    RRC(ArithmeticTarget),
-    RLC(ArithmeticTarget),
-    SWAP(ArithmeticTarget),
+    BIT {bit: u8, registers: ArithmeticTarget}, // test to see if a specific bit of a specific register is set
+    RES { bit: u8, registers: ArithmeticTarget }, // set a specific bit of a specific register to 0
+    SET { bit: u8, registers: ArithmeticTarget }, // set a specific bit of a specific register to 1
+    SRL(ArithmeticTarget), // bit shift a specific register right by 1
+    SRA(ArithmeticTarget), // arithmetic shift a specific register right by 1
+
+    // ========== ROTATE OPERATIONS (ANY REGISTER) ==========
+    RR(ArithmeticTarget), // bit rotate a specific register right by 1 through the carry flag
+    RL(ArithmeticTarget), // bit rotate a specific register left by 1 through the carry flag
+    RRC(ArithmeticTarget), // bit rotate a specific register right by 1 (not through the carry flag)
+    RLC(ArithmeticTarget), // bit rotate a specific register left by 1 (not through the carry flag)
+    SWAP(ArithmeticTarget), // switch upper and lower nibble of a specific register
+    SLA(ArithmeticTarget), // arithmetic shift a specific register left by 1
+
+    NOP,
+    HALT,
     
 
 }
@@ -61,4 +68,9 @@ pub enum ArithmeticTarget{
 #[derive(Copy, Clone, Debug)]
 pub enum WordTarget16{
     BC, DE, HL, SP // for ADD HL, rr
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum IncDecTarget{
+    A, B, C, D, E, H, L, BC, DE, HL, SP
 }
