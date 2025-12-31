@@ -13,6 +13,16 @@ pub struct CPU{
     pub stack_pointer: u16, // Stack Pointer: top of stack (grows downward)
 }
 
+pub struct MemoryBus{
+    memory :[u8; 0xFFFF]
+}
+
+impl MemoryBus{
+    fn read_byte(&self, address: u16) -> u8{
+        self.memory[address as usize]
+    }
+}
+
 impl CPU{
     /// Constructor
     /// Returns a CPU with default-initialised registers (0)
@@ -41,6 +51,11 @@ impl CPU{
                 self.sub_from_a(rhs)
             }
 
+            Instruction::AND(target) => {
+                let rhs = self.read_target(target);
+                self.and_from_a(rhs)
+            }
+
             Instruction::OR(target) => {
                 let rhs = self.read_target(target);
                 self.or_with_a(rhs)
@@ -54,6 +69,11 @@ impl CPU{
             Instruction::CP(target) => {
                 let rhs = self.read_target(target);
                 self.compare_with_a(rhs)
+            }
+
+            _ => {
+                // You can leave this empty or print a message for debugging
+                // println!("Instruction not implemented yet: {:?}", instruction);
             }
         }
     }
