@@ -5,20 +5,28 @@ use registers::Registers;
 use instruction::{Instruction, ArithmeticTarget};
 use crate::cpu::instruction::WordTarget16;
 
+const MEMORY_SIZE: usize = 0x10000;
 // CPU model
 #[derive(Default)]
 pub struct CPU{
     pub registers: Registers,
     pub program_counter: u16, // Program counter: address of next opcode/operand
     pub stack_pointer: u16, // Stack Pointer: top of stack (grows downward)
+    pub bus: MemoryBus,
 }
 
 pub struct MemoryBus{
-    memory :[u8; 0xFFFF]
+    memory :[u8; MEMORY_SIZE]
 }
-
-impl MemoryBus{
-    fn read_byte(&self, address: u16) -> u8{
+impl Default for MemoryBus {
+    fn default() -> Self {
+        Self {
+            memory: [0; MEMORY_SIZE]
+        }
+    }
+}
+impl MemoryBus {
+    fn read_byte(&self, address: u16) -> u8 {
         self.memory[address as usize]
     }
 }
@@ -32,6 +40,8 @@ impl CPU{
             registers: Registers:: default(),
             program_counter: 0x0000,
             stack_pointer: 0xFFFE,
+            bus: MemoryBus::default(),
+
         }
     }
 
