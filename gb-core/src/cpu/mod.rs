@@ -3,6 +3,7 @@ pub mod instruction;
 
 use registers::Registers;
 use instruction::{Instruction, ArithmeticTarget};
+use crate::cpu::instruction::WordTarget16;
 
 // CPU model
 #[derive(Default)]
@@ -33,6 +34,26 @@ impl CPU{
             Instruction::ADD(target) => {
                 let rhs = self.read_target(target);
                 self.add_into_a(rhs);
+            }
+
+            Instruction::SUB(target) => {
+                let rhs = self.read_target(target);
+                self.sub_from_a(rhs)
+            }
+
+            Instruction::OR(target) => {
+                let rhs = self.read_target(target);
+                self.or_with_a(rhs)
+            }
+
+            Instruction::XOR(target) => {
+                let rhs = self.read_target(target);
+                self.xor_with_a(rhs)
+            }
+
+            Instruction::CP(target) => {
+                let rhs = self.read_target(target);
+                self.compare_with_a(rhs)
             }
         }
     }
@@ -68,5 +89,77 @@ impl CPU{
         self.registers.f.carry = sum > 0xFF;    // set if the full 8-bit addition overflowed
 
         self.registers.a = result;
+    }
+
+    fn read_target_16(&self, target: WordTarget16) -> u16{
+        match target{
+            WordTarget16::BC => self.registers.get_bc(),
+            WordTarget16::DE => self.registers.get_de(),
+            WordTarget16::HL => self.registers.get_hl(),
+            WordTarget16::SP => self.stack_pointer,
+        }
+    }
+
+    fn add_into_hl(&mut self, rhs: u16){
+        let hl = self.registers.get_hl();
+
+        let sum = (hl as u32) + (rhs as u32);
+        let result = sum as u16;
+
+        self.registers.f.subtract = false;
+
+        self.registers.f.half_carry = ((hl & 0x0FFF) + (rhs & 0x0FFF)) > 0x0FFF;
+
+        self.registers.f.carry = sum > 0xFFFF;
+
+        self.registers.set_hl(result);
+    }
+
+    pub fn sub_from_a(&mut self, rhs: u8) {
+        let a = self.registers.a;
+        let result = a.wrapping_sub(rhs);
+
+        self.registers.f.zero   = result == 0;
+        self.registers.f.subtract = true;
+        self.registers.f.half_carry = (a & 0x0F) < (rhs & 0x0F);
+        self.registers.f.carry = a < rhs;
+    }
+
+    pub fn and_from_a(&mut self, rhs: u8) {
+        self.registers.a &= rhs;
+
+        self.registers.f.zero = self.registers.a == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = true;
+        self.registers.f.carry = false;
+    }
+
+    pub fn compare_with_a(&mut self, rhs: u8){
+        let a = self.registers.a;
+        let result = a.wrapping_sub(rhs);
+
+        self.registers.f.zero   = result == 0;
+        self.registers.f.subtract = true;
+        self.registers.f.half_carry = (a & 0x0F) < (rhs & 0x0F);
+        self.registers.f.carry = a < rhs;
+    }
+
+    pub fn or_with_a(&mut self, rhs: u8){
+        self.registers.a |= rhs;
+
+        self.registers.f.zero = self.registers.a == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = false;
+
+    }
+
+    pub fn xor_with_a(&mut self, rhs: u8){
+        self.registers.a ^= rhs;
+
+        self.registers.f.zero = self.registers.a == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = false;
     }
 }
