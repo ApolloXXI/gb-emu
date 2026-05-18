@@ -1,5 +1,9 @@
 mod cpu;
 
+pub use cpu::CPU;
+pub use cpu::registers::Registers;
+pub use cpu::instruction::{Instruction, ArithmeticTarget, JumpCondition, Load16Target, Load16Source, IncDecTarget16};
+
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }
