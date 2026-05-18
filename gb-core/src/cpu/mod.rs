@@ -178,6 +178,110 @@ impl CPU{
                 self.daa();
             }
 
+            // ========== LOAD OPERATIONS ==========
+            Instruction::LD_A_D16(addr) => {
+                self.ld_a_d16(addr);
+            }
+
+            Instruction::LD_A_R8(offset) => {
+                self.ld_a_r8(offset);
+            }
+
+            Instruction::LD_R8_A(offset) => {
+                self.ld_r8_a(offset);
+            }
+
+            Instruction::LDH_A_D8(val) => {
+                self.ldh_a_d8(val);
+            }
+
+            Instruction::LDH_D8_A(val) => {
+                self.ldh_d8_a(val);
+            }
+
+            Instruction::LDH_A_C => {
+                self.ldh_a_c();
+            }
+
+            Instruction::LDH_C_A => {
+                self.ldh_c_a();
+            }
+
+            Instruction::LD_SP_HL => {
+                self.ld_sp_hl();
+            }
+
+            Instruction::LD_HL_SP_D8(offset) => {
+                self.ld_hl_sp_d8(offset);
+            }
+
+            Instruction::LD_16_16(target, source) => {
+                self.ld_16_16(target, source);
+            }
+
+            Instruction::LD_A_16(target) => {
+                self.ld_a_16(target);
+            }
+
+            Instruction::LD_16_A(target) => {
+                self.ld_16_a(target);
+            }
+
+            Instruction::LD_D16_SP(addr) => {
+                self.ld_d16_sp(addr);
+            }
+
+            // ========== JUMP/CALL/RETURN OPERATIONS ==========
+            Instruction::JP(condition, addr) => {
+                return self.jp(condition, addr);
+            }
+
+            Instruction::JP_HL => {
+                return self.jp_hl();
+            }
+
+            Instruction::JR(condition, offset) => {
+                return self.jr(condition, offset);
+            }
+
+            Instruction::CALL(condition, addr) => {
+                return self.call(condition, addr);
+            }
+
+            Instruction::RET(condition) => {
+                return self.ret(condition);
+            }
+
+            Instruction::RETI => {
+                return self.reti();
+            }
+
+            Instruction::RST(addr) => {
+                return self.rst(addr);
+            }
+
+            // ========== STACK OPERATIONS ==========
+            Instruction::PUSH(target) => {
+                self.push(target);
+            }
+
+            Instruction::POP(target) => {
+                self.pop(target);
+            }
+
+            // ========== MISCELLANEOUS ==========
+            Instruction::STOP => {
+                // Stop CPU until interrupt
+            }
+
+            Instruction::DI => {
+                self.di();
+            }
+
+            Instruction::EI => {
+                self.ei();
+            }
+
             Instruction::HALT => {
                 // Halt the CPU until interrupt
             }
@@ -489,5 +593,251 @@ impl CPU{
         self.registers.a = a as u8;
         self.registers.f.zero = self.registers.a == 0;
         self.registers.f.half_carry = false;
+    }
+
+    // ========== LOAD OPERATIONS ==========
+
+    /// LD A, (a16) - Load A from 16-bit immediate address
+    pub fn ld_a_d16(&mut self, addr: u16) {
+        self.registers.a = self.bus.read_byte(addr);
+    }
+
+    /// LD A, (HL + d8) - Load A from memory at HL + signed offset
+    pub fn ld_a_r8(&mut self, offset: i8) {
+        let hl = self.registers.get_hl();
+        let addr = (hl as i16 + offset as i16) as u16;
+        self.registers.a = self.bus.read_byte(addr);
+    }
+
+    /// LD (HL + d8), A - Store A to memory at HL + signed offset
+    pub fn ld_r8_a(&mut self, offset: i8) {
+        let hl = self.registers.get_hl();
+        let addr = (hl as i16 + offset as i16) as u16;
+        self.bus.memory[addr as usize] = self.registers.a;
+    }
+
+    /// LDH A, (a8) - Load A from high memory (0xFF00 + immediate)
+    pub fn ldh_a_d8(&mut self, val: u8) {
+        let addr = 0xFF00u16 + val as u16;
+        self.registers.a = self.bus.read_byte(addr);
+    }
+
+    /// LDH (a8), A - Store A to high memory (0xFF00 + immediate)
+    pub fn ldh_d8_a(&mut self, val: u8) {
+        let addr = 0xFF00u16 + val as u16;
+        self.bus.memory[addr as usize] = self.registers.a;
+    }
+
+    /// LDH A, (C) - Load A from high memory (0xFF00 + C)
+    pub fn ldh_a_c(&mut self) {
+        let addr = 0xFF00u16 + self.registers.c as u16;
+        self.registers.a = self.bus.read_byte(addr);
+    }
+
+    /// LDH (C), A - Store A to high memory (0xFF00 + C)
+    pub fn ldh_c_a(&mut self) {
+        let addr = 0xFF00u16 + self.registers.c as u16;
+        self.bus.memory[addr as usize] = self.registers.a;
+    }
+
+    /// LD SP, HL - Load SP with value of HL
+    pub fn ld_sp_hl(&mut self) {
+        self.stack_pointer = self.registers.get_hl();
+    }
+
+    /// LD HL, SP + d8 - Load HL with SP + signed immediate
+    pub fn ld_hl_sp_d8(&mut self, offset: i8) {
+        let sp = self.stack_pointer as i16;
+        let result = (sp + offset as i16) as u16;
+        
+        self.registers.f.subtract = false;
+        self.registers.f.zero = false;
+        self.registers.f.half_carry = ((sp & 0xF) + (offset as i16 & 0xF)) > 0xF;
+        self.registers.f.carry = ((sp as u32) + (offset as i32 as u32)) > 0xFFFF;
+        
+        self.registers.set_hl(result);
+    }
+
+    /// LD rr, d16 / LD SP, d16 - Load 16-bit register pair with immediate
+    pub fn ld_16_16(&mut self, target: Load16Target, source: Load16Source) {
+        match source {
+            Load16Source::Imm16 => {
+                // This would need the immediate value passed separately
+                // For now, this is a placeholder
+            }
+            Load16Source::SP => {
+                match target {
+                    Load16Target::BC => self.registers.set_bc(self.stack_pointer),
+                    Load16Target::DE => self.registers.set_de(self.stack_pointer),
+                    Load16Target::HL => self.registers.set_hl(self.stack_pointer),
+                    Load16Target::SP => {} // LD SP, SP is a no-op
+                }
+            }
+        }
+    }
+
+    /// LD A, (rr) - Load A from 16-bit address in register pair
+    pub fn ld_a_16(&mut self, target: Load16Target) {
+        let addr = match target {
+            Load16Target::BC => self.registers.get_bc(),
+            Load16Target::DE => self.registers.get_de(),
+            Load16Target::HL => self.registers.get_hl(),
+            Load16Target::SP => self.stack_pointer,
+        };
+        self.registers.a = self.bus.read_byte(addr);
+    }
+
+    /// LD (rr), A - Store A to 16-bit address in register pair
+    pub fn ld_16_a(&mut self, target: Load16Target) {
+        let addr = match target {
+            Load16Target::BC => self.registers.get_bc(),
+            Load16Target::DE => self.registers.get_de(),
+            Load16Target::HL => self.registers.get_hl(),
+            Load16Target::SP => self.stack_pointer,
+        };
+        self.bus.memory[addr as usize] = self.registers.a;
+    }
+
+    /// LD (a16), SP - Store SP to 16-bit immediate address
+    pub fn ld_d16_sp(&mut self, addr: u16) {
+        self.bus.memory[addr as usize] = (self.stack_pointer & 0xFF) as u8;
+        self.bus.memory[(addr + 1) as usize] = ((self.stack_pointer >> 8) & 0xFF) as u8;
+    }
+
+    // ========== JUMP/CALL/RETURN OPERATIONS ==========
+
+    /// Check if jump condition is met
+    fn check_condition(&self, condition: JumpCondition) -> bool {
+        match condition {
+            JumpCondition::NZ => !self.registers.f.zero,
+            JumpCondition::Z => self.registers.f.zero,
+            JumpCondition::NC => !self.registers.f.carry,
+            JumpCondition::C => self.registers.f.carry,
+            JumpCondition::None => true,
+        }
+    }
+
+    /// JP nn / JP cond, nn - Jump to 16-bit address
+    pub fn jp(&mut self, condition: JumpCondition, addr: u16) -> Option<u16> {
+        if self.check_condition(condition) {
+            return Some(addr);
+        }
+        None
+    }
+
+    /// JP HL - Jump to address in HL
+    pub fn jp_hl(&mut self) -> Option<u16> {
+        Some(self.registers.get_hl())
+    }
+
+    /// JR e / JR cond, e - Relative jump
+    pub fn jr(&mut self, condition: JumpCondition, offset: i8) -> Option<u16> {
+        if self.check_condition(condition) {
+            let pc = self.program_counter as i16;
+            return Some((pc + offset as i16) as u16);
+        }
+        None
+    }
+
+    /// CALL nn / CALL cond, nn - Call subroutine
+    pub fn call(&mut self, condition: JumpCondition, addr: u16) -> Option<u16> {
+        if self.check_condition(condition) {
+            // Push return address onto stack
+            let return_addr = self.program_counter;
+            self.stack_pointer = self.stack_pointer.wrapping_sub(1);
+            self.bus.memory[self.stack_pointer as usize] = ((return_addr >> 8) & 0xFF) as u8;
+            self.stack_pointer = self.stack_pointer.wrapping_sub(1);
+            self.bus.memory[self.stack_pointer as usize] = (return_addr & 0xFF) as u8;
+            
+            return Some(addr);
+        }
+        None
+    }
+
+    /// RET / RET cond - Return from subroutine
+    pub fn ret(&mut self, condition: JumpCondition) -> Option<u16> {
+        if self.check_condition(condition) {
+            // Pop return address from stack
+            let lo = self.bus.memory[self.stack_pointer as usize] as u16;
+            self.stack_pointer = self.stack_pointer.wrapping_add(1);
+            let hi = self.bus.memory[self.stack_pointer as usize] as u16;
+            self.stack_pointer = self.stack_pointer.wrapping_add(1);
+            
+            return Some((hi << 8) | lo);
+        }
+        None
+    }
+
+    /// RETI - Return from interrupt
+    pub fn reti(&mut self) -> Option<u16> {
+        // Pop return address from stack
+        let lo = self.bus.memory[self.stack_pointer as usize] as u16;
+        self.stack_pointer = self.stack_pointer.wrapping_add(1);
+        let hi = self.bus.memory[self.stack_pointer as usize] as u16;
+        self.stack_pointer = self.stack_pointer.wrapping_add(1);
+        
+        // Enable interrupts (would need interrupt flag in real implementation)
+        
+        Some((hi << 8) | lo)
+    }
+
+    /// RST t - Restart (call to fixed addresses)
+    pub fn rst(&mut self, addr: u16) -> Option<u16> {
+        // Push return address onto stack
+        let return_addr = self.program_counter;
+        self.stack_pointer = self.stack_pointer.wrapping_sub(1);
+        self.bus.memory[self.stack_pointer as usize] = ((return_addr >> 8) & 0xFF) as u8;
+        self.stack_pointer = self.stack_pointer.wrapping_sub(1);
+        self.bus.memory[self.stack_pointer as usize] = (return_addr & 0xFF) as u8;
+        
+        Some(addr)
+    }
+
+    // ========== STACK OPERATIONS ==========
+
+    /// PUSH rr - Push 16-bit register pair onto stack
+    pub fn push(&mut self, target: IncDecTarget16) {
+        let val = match target {
+            IncDecTarget16::BC => self.registers.get_bc(),
+            IncDecTarget16::DE => self.registers.get_de(),
+            IncDecTarget16::HL => self.registers.get_hl(),
+            IncDecTarget16::AF => self.registers.get_af(),
+        };
+        
+        self.stack_pointer = self.stack_pointer.wrapping_sub(1);
+        self.bus.memory[self.stack_pointer as usize] = ((val >> 8) & 0xFF) as u8;
+        self.stack_pointer = self.stack_pointer.wrapping_sub(1);
+        self.bus.memory[self.stack_pointer as usize] = (val & 0xFF) as u8;
+    }
+
+    /// POP rr - Pop 16-bit register pair from stack
+    pub fn pop(&mut self, target: IncDecTarget16) {
+        let lo = self.bus.memory[self.stack_pointer as usize] as u16;
+        self.stack_pointer = self.stack_pointer.wrapping_add(1);
+        let hi = self.bus.memory[self.stack_pointer as usize] as u16;
+        self.stack_pointer = self.stack_pointer.wrapping_add(1);
+        
+        let val = (hi << 8) | lo;
+        
+        match target {
+            IncDecTarget16::BC => self.registers.set_bc(val),
+            IncDecTarget16::DE => self.registers.set_de(val),
+            IncDecTarget16::HL => self.registers.set_hl(val),
+            IncDecTarget16::AF => self.registers.set_af(val),
+        }
+    }
+
+    // ========== MISCELLANEOUS ==========
+
+    /// DI - Disable interrupts
+    pub fn di(&mut self) {
+        // In a full implementation, this would set an interrupt enable flag
+        // For now, it's a no-op
+    }
+
+    /// EI - Enable interrupts
+    pub fn ei(&mut self) {
+        // In a full implementation, this would set an interrupt enable flag
+        // For now, it's a no-op
     }
 }
